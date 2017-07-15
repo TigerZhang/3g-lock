@@ -2,7 +2,8 @@
 #include "module_common.h"
 #include "Arduino_Interface.h"
 
-#define gsm_port MODULE_PORT
+#define gsm_port  MODULE_PORT
+#define gsm_port_print(x) do { MODULE_PORT.print(x); SerialUSB.print(">>>"); SerialUSB.print(x); } while(0)
 #define debug_print(x) SerialUSB.println(x)
 
 #ifdef __cplusplus
@@ -114,9 +115,9 @@ void reverse(char* begin, char* end);
       debug_print(F("gsm_set_time() started"));  
    
       //setting modems clock from current time var
-      gsm_port.print("AT+CCLK=\"");
-      gsm_port.print(time_char);
-      gsm_port.print("\"\r\n"); 
+      gsm_port_print("AT+CCLK=\"");
+      gsm_port_print(time_char);
+      gsm_port_print("\"\r\n"); 
       
       delay(1000);       
       gsm_get_reply();
@@ -131,8 +132,8 @@ void reverse(char* begin, char* end);
       debug_print(F("gsm_set_pin() started"));      
          
       //checking if PIN is set 
-      gsm_port.print("AT+CPIN?");
-      gsm_port.print("\r\n"); 
+      gsm_port_print("AT+CPIN?");
+      gsm_port_print("\r\n"); 
       
       delay(1000);       
       gsm_get_reply();
@@ -153,9 +154,9 @@ void reverse(char* begin, char* end);
                  {
                    debug_print(F("gsm_set_pin(): PIN supplied, sending to modem."));
                    
-                   gsm_port.print("AT+CPIN=");
-                   gsm_port.print(config.sim_pin);                       
-                   gsm_port.print("\r\n"); 
+                   gsm_port_print("AT+CPIN=");
+                   gsm_port_print(config.sim_pin);                       
+                   gsm_port_print("\r\n"); 
                    
                    delay(1000);       
                    gsm_get_reply();
@@ -200,8 +201,8 @@ void reverse(char* begin, char* end);
       gsm_get_reply();       
 
       //get time from modem
-      gsm_port.print("AT+CCLK?");
-      gsm_port.print("\r\n"); 
+      gsm_port_print("AT+CCLK?");
+      gsm_port_print("\r\n"); 
       
       delay(1000);       
 
@@ -239,22 +240,22 @@ void reverse(char* begin, char* end);
       debug_print(F("gsm_startup_cmd() started"));      
       
       //disable echo for TCP data
-       gsm_port.print("AT+QISDE=0");
-       gsm_port.print("\r\n");   
+       gsm_port_print("AT+QISDE=0");
+       gsm_port_print("\r\n");   
       
        delay(1000);      
        gsm_get_reply();  
        
       //set receiving TCP data by command
-      gsm_port.print("AT+QINDI=1");
-      gsm_port.print("\r\n");   
+      gsm_port_print("AT+QINDI=1");
+      gsm_port_print("\r\n");   
       
       delay(1000);      
       gsm_get_reply();  
       
       //set SMS as text format
-      gsm_port.print("AT+CMGF=1");
-      gsm_port.print("\r\n");   
+      gsm_port_print("AT+CMGF=1");
+      gsm_port_print("\r\n");   
       
       delay(1000);      
       gsm_get_reply();  
@@ -271,8 +272,8 @@ void reverse(char* begin, char* end);
       debug_print(F("gsm_get_imei() started"));      
       
       //get modem's imei 
-      gsm_port.print("AT+GSN");
-      gsm_port.print("\r\n");    
+      gsm_port_print("AT+GSN");
+      gsm_port_print("\r\n");    
       
       delay(1000);      
       gsm_get_reply();     
@@ -311,11 +312,11 @@ void reverse(char* begin, char* end);
     {
     debug_print(F("gsm_send_at() started")); 
     
-      gsm_port.print("AT");
-      gsm_port.print("\r\n");
+      gsm_port_print("AT");
+      gsm_port_print("\r\n");
       delay(1000);
-      gsm_port.print("AT");
-      gsm_port.print("\r\n");      
+      gsm_port_print("AT");
+      gsm_port_print("\r\n");      
       delay(1000);
   
       gsm_get_reply();
@@ -331,25 +332,25 @@ void reverse(char* begin, char* end);
       debug_print(F("gsm_disconnect() started")); 
       
       //disconnect GSM 
-      gsm_port.print("AT+QIDEACT=1");
-      gsm_port.print("\r\n");  
-      delay(4000);
-      gsm_get_reply();
-      
-      //check if result contains DEACT OK
-      char *tmp = strstr(modem_reply, "OK");
-      
-      if(tmp!=NULL)
-        {
-          debug_print(F("gsm_disconnect(): OK found")); 
-          ret = 1;  
-        }
-        else
-        {
-          debug_print(F("gsm_disconnect(): OK not found.")); 
-        }
+//      gsm_port_print("AT+QIDEACT=1");
+//      gsm_port_print("\r\n");  
+//      delay(4000);
+//      gsm_get_reply();
+//      
+//      //check if result contains DEACT OK
+//      char *tmp = strstr(modem_reply, "OK");
+//      
+//      if(tmp!=NULL)
+//        {
+//          debug_print(F("gsm_disconnect(): OK found")); 
+//          ret = 1;  
+//        }
+//        else
+//        {
+//          debug_print(F("gsm_disconnect(): OK not found.")); 
+//        }
 
-      gsm_port.print("AT+QICLOSE=0\r\n");
+      gsm_port_print("AT+QICLOSE=0\r\n");
       delay(500);
       gsm_get_reply();
       
@@ -363,26 +364,26 @@ void reverse(char* begin, char* end);
       debug_print(F("gsm_set_apn() started")); 
            
       //set all APN data, dns, etc
-      gsm_port.print("AT+QIREGAPP=\"");
-      gsm_port.print(config.apn);
-      gsm_port.print("\",\"");
-      gsm_port.print(config.user);  
-      gsm_port.print("\",\"");    
-      gsm_port.print(config.pwd);
-      gsm_port.print("\"");
-      gsm_port.print("\r\n"); 
+      gsm_port_print("AT+QIREGAPP=\"");
+      gsm_port_print(config.apn);
+      gsm_port_print("\",\"");
+      gsm_port_print(config.user);  
+      gsm_port_print("\",\"");    
+      gsm_port_print(config.pwd);
+      gsm_port_print("\"");
+      gsm_port_print("\r\n"); 
       
       delay(1500);       
       gsm_get_reply();
       
-      gsm_port.print("AT+QIDNSCFG=\"8.8.8.8\"");
-      gsm_port.print("\r\n");       
+      gsm_port_print("AT+QIDNSCFG=\"8.8.8.8\"");
+      gsm_port_print("\r\n");       
       
       delay(1500);       
       gsm_get_reply();
       
-      gsm_port.print("AT+QIDNSIP=1");
-      gsm_port.print("\r\n"); 
+      gsm_port_print("AT+QIDNSIP=1");
+      gsm_port_print("\r\n"); 
       
       delay(1500); 
       gsm_get_reply();
@@ -407,13 +408,13 @@ void reverse(char* begin, char* end);
           
           //open socket connection to remote host
           //opening connection
-          gsm_port.print("AT+QIOPEN=1,0,\"");
-          gsm_port.print(PROTO);
-          gsm_port.print("\",\"");
-          gsm_port.print(HOSTNAME);
-          gsm_port.print("\",");
-          gsm_port.print(HTTP_PORT);
-          gsm_port.print("\r\n"); 
+          gsm_port_print("AT+QIOPEN=1,0,\"");
+          gsm_port_print(PROTO);
+          gsm_port_print("\",\"");
+          gsm_port_print(HOSTNAME);
+          gsm_port_print("\",");
+          gsm_port_print(HTTP_PORT);
+          gsm_port_print("\r\n"); 
           
           delay(4000);  //might take sometime to open socket
           gsm_get_reply();
@@ -457,8 +458,8 @@ void reverse(char* begin, char* end);
       for(int k=0;k<10;k++)
         {
       
-            gsm_port.print("AT+QISACK");
-            gsm_port.print("\r\n");
+            gsm_port_print("AT+QISACK");
+            gsm_port_print("\r\n");
             
             delay(500);      
             gsm_get_reply();
@@ -524,17 +525,17 @@ void reverse(char* begin, char* end);
        debug_print(tmp_len);
 
        //sending header packet to remote host
-       gsm_port.print("AT+QISEND=0,");
-       gsm_port.print(tmp_len); 
-       gsm_port.print("\r\n");
+       gsm_port_print("AT+QISEND=0,");
+       gsm_port_print(tmp_len); 
+       gsm_port_print("\r\n");
        
        delay(500);
        gsm_get_reply();
        
        //sending header                     
-       gsm_port.print(HTTP_HEADER1); 
-       gsm_port.print(http_len); 
-       gsm_port.print(HTTP_HEADER2);           
+       gsm_port_print(HTTP_HEADER1); 
+       gsm_port_print(http_len); 
+       gsm_port_print(HTTP_HEADER2);           
        
        //validate header delivery
        gsm_validate_tcp();
@@ -542,19 +543,19 @@ void reverse(char* begin, char* end);
        debug_print(F("gsm_send_http(): Sending IMEI and Key"));
        
        //sending imei and key first
-       gsm_port.print("AT+QISEND=0,");
-       gsm_port.print(13+strlen(config.imei)+strlen(config.key)); 
-       gsm_port.print("\r\n");
+       gsm_port_print("AT+QISEND=0,");
+       gsm_port_print(13+strlen(config.imei)+strlen(config.key)); 
+       gsm_port_print("\r\n");
      
        delay(500);
        gsm_get_reply();  
        
  
-       gsm_port.print("imei=");
-       gsm_port.print(config.imei);
-       gsm_port.print("&key=");
-       gsm_port.print(config.key);
-       gsm_port.print("&d=");
+       gsm_port_print("imei=");
+       gsm_port_print(config.imei);
+       gsm_port_print("&key=");
+       gsm_port_print(config.key);
+       gsm_port_print("&d=");
                         
        delay(500);
        gsm_get_reply(); 
@@ -617,16 +618,16 @@ void reverse(char* begin, char* end);
                     debug_print(chunk_len);
                                     
                     //sending chunk
-                    gsm_port.print("AT+QISEND=0,");
-                    gsm_port.print(chunk_len); 
-                    gsm_port.print("\r\n");  
+                    gsm_port_print("AT+QISEND=0,");
+                    gsm_port_print(chunk_len); 
+                    gsm_port_print("\r\n");  
                     
                     delay(1000);  
                    
               }
 
             //sending data 
-            gsm_port.print(data_current[i]);           
+            gsm_port_print(data_current[i]);           
             chunk_pos++;
             k++;
             
@@ -716,66 +717,66 @@ void reverse(char* begin, char* end);
      
   void gsm_debug()
     {
-   gsm_port.print("AT\r\n");
+   gsm_port_print("AT\r\n");
    delay(200);
     gsm_get_reply();
 
-   gsm_port.print("AT\r\n");
+   gsm_port_print("AT\r\n");
    delay(200);
     gsm_get_reply();
    
-   gsm_port.print("AT+QLOCKF=?");
-   gsm_port.print("\r\n");     
+   gsm_port_print("AT+QLOCKF=?");
+   gsm_port_print("\r\n");     
    delay(2000);   
    gsm_get_reply();
 
-   gsm_port.print("AT+QBAND?");
-   gsm_port.print("\r\n");     
+   gsm_port_print("AT+QBAND?");
+   gsm_port_print("\r\n");     
    delay(2000);   
    gsm_get_reply();
    
-   gsm_port.print("AT+CGMR");
-   gsm_port.print("\r\n");     
-   delay(2000);   
-   gsm_get_reply();
-
-   gsm_port.print("AT+CGMM");
-   gsm_port.print("\r\n");     
+   gsm_port_print("AT+CGMR");
+   gsm_port_print("\r\n");     
    delay(2000);   
    gsm_get_reply();
 
-   gsm_port.print("AT+CGSN");
-   gsm_port.print("\r\n");     
+   gsm_port_print("AT+CGMM");
+   gsm_port_print("\r\n");     
+   delay(2000);   
+   gsm_get_reply();
+
+   gsm_port_print("AT+CGSN");
+   gsm_port_print("\r\n");     
    delay(2000);   
    gsm_get_reply();
    
    
-   gsm_port.print("AT+CREG?");
-   gsm_port.print("\r\n");   
+   gsm_port_print("AT+CREG?");
+   gsm_port_print("\r\n");   
    
    delay(2000);   
    gsm_get_reply();
    
-   gsm_port.print("AT+CSQ");
-   gsm_port.print("\r\n");   
+   gsm_port_print("AT+CSQ");
+   gsm_port_print("\r\n");   
    
    delay(2000);   
    gsm_get_reply();     
    
-   gsm_port.print("AT+QENG?");
-   gsm_port.print("\r\n");   
+   gsm_port_print("AT+QENG?");
+   gsm_port_print("\r\n");   
    
    delay(2000);   
    gsm_get_reply();   
 
-   gsm_port.print("AT+COPS?");
-   gsm_port.print("\r\n");   
+   gsm_port_print("AT+COPS?");
+   gsm_port_print("\r\n");   
    
    delay(2000);   
    gsm_get_reply();
    
-   gsm_port.print("AT+COPS=?");
-   gsm_port.print("\r\n");   
+   gsm_port_print("AT+COPS=?");
+   gsm_port_print("\r\n");   
    
    delay(6000);   
    gsm_get_reply();

@@ -57,6 +57,13 @@ unsigned long last_time_gps, last_date_gps;
 
 #define debug_print(x) SerialUSB.println(x)
 
+#define OPENLOCK_STAT_IDLE	0
+#define OPENLOCK_STAT_MOTO_STARTED 1
+#define OPENLOCK_STAT_CAM_PULLED 2
+
+#define RESP_ERROR		-1
+#define RESP_PONG		2
+#define RESP_OPENLOCK	3
 
 int moto_timeout_in_10ms = 0;
 int open_lock_step = 0;
@@ -66,6 +73,15 @@ int time_delay_before_stop_moto_in_10ms = 0;
 int need_reconnect = 1;
 int wait_for_response = 0;
 int data_sent = 0;
+
+int gsm_timer = 0;
+
+
+int bolt;
+int previous_bolt = -1;
+
+int cam;
+int preview_cam = -1;
 
 WioTracker wio = WioTracker();
 
@@ -81,7 +97,7 @@ void setup() {
 
   wio.Power_On();
   while (false == wio.Check_If_Power_On()) {
-    SerialUSB.println("Waitting for module to alvie...");
+    SerialUSB.println("Waitting for module to alive...");
     delay(1000);
   }
   SerialUSB.println("Power On O.K!");
@@ -93,6 +109,8 @@ void setup() {
   pinMode(PIN_CAM, INPUT_PULLUP);
   pinMode(PIN_MOTO, OUTPUT);
   digitalWrite(PIN_MOTO, HIGH);
+
+  check_gsm();
 }
 
 char cmd;
@@ -102,7 +120,7 @@ void loop() {
 
   /* Debug */
   if (SerialUSB.available()) {
-    // MODULE_PORT.write(SerialUSB.read());
+    // .write(SerialUSB.read());
     cmd = SerialUSB.read();
     if (cmd == '1') {
       stop_moto();
@@ -111,8 +129,56 @@ void loop() {
     }
   }
 
-  if (open_lock_step <= 0) {
+  //  yunba_gsm_send_data();
+  //
+
+//  if (SerialUSB.available()) {
+//    MODULE_PORT.write(SerialUSB.read());
+//  }
+//    if(MODULE_PORT.available()){
+//      SerialUSB.write(MODULE_PORT.read());
+//    }
+
+  //  gsm_debug();
+
+  //  if (gsm_timer >= 1000) {
+  //    gsm_timer = 0;
+  //
+  //    check_gsm();
+  //  }
+
+  //  check_gsm();
+
+  if (data_sent) {
+	  // check recv data via at command every 2s
+    if (gsm_timer >= 200) {
+      gsm_timer = 0;
+
+      check_gsm();
+    }
+
+	  // send ping every 1 minutes
+	  if (gsm_timer >= 100*60) {
+		  yunba_gsm_send_data();
+	  }
+  } else {
+    check_gsm();
+  }
+
+//  //  delay(500);
+  timer_resume(TIMER2);
+}
+
+void check_gsm() {
+  int ret_tmp;
+
+  debug_print("check_gsm");
+
+  if (open_lock_step <= OPENLOCK_STAT_IDLE) {
     if (need_reconnect) {
+      //send 2 ATs
+      gsm_send_at();
+
       gsm_reconnect();
       wait_for_response = 0;
       data_sent = 0;
@@ -124,21 +190,12 @@ void loop() {
         ret_tmp = parse_receive_reply();
         if (ret_tmp == -1) {
           need_reconnect = 1;
-        }
+        } else if (ret_tmp == RESP_OPENLOCK) {
+			  start_moto();
+		  }
       }
     }
   }
-
-  //  yunba_gsm_send_data();
-  //
-  //  if(MODULE_PORT.available()){
-  //    SerialUSB.write(MODULE_PORT.read());
-  //  }
-
-  //  gsm_debug();
-
-  //  delay(500);
-  timer_resume(TIMER2);
 }
 
 void gsm_reconnect() {
@@ -153,6 +210,7 @@ void gsm_reconnect() {
   else
   {
     debug_print(F("Error deactivating GPRS."));
+    gsm_send_at();
   }
 
   //opening connection
@@ -182,21 +240,16 @@ void gsm_reconnect() {
 
 void start_moto() {
   digitalWrite(PIN_MOTO, LOW);
-  open_lock_step = 1;
+  open_lock_step = OPENLOCK_STAT_MOTO_STARTED;
   moto_timeout_in_10ms = 0;
   time_delay_before_stop_moto_in_10ms = 0;
 }
 
 void stop_moto() {
-  open_lock_step = 0;
+  open_lock_step = OPENLOCK_STAT_IDLE;
   moto_timeout_in_10ms = 0;
   time_delay_before_stop_moto_in_10ms = 0;
   digitalWrite(PIN_MOTO, HIGH);
-}
-
-void doAfter()
-{
-  SerialUSB.write("do after");
 }
 
 void yunba_gsm_send_data() {
@@ -233,14 +286,8 @@ void yunba_gsm_send_data() {
   }
 }
 
-int bolt;
-int previous_bolt = -1;
-
-int cam;
-int preview_cam = -1;
-
 void ledOn() {
-  //  SerialUSB.write("on");
+  //    SerialUSB.write("on");
   bolt = digitalRead(PIN_BOLT);
   if (bolt != previous_bolt) {
     previous_bolt = bolt;
@@ -254,13 +301,13 @@ void ledOn() {
 
     // open lock started, and the cam pulled down
     // then wait extra DELAY_AFTER_CAM_PULLED ms before stop the moto
-    if (cam == 0 && open_lock_step == 1) {
-      open_lock_step = 2;
+    if (cam == 0 && open_lock_step == OPENLOCK_STAT_MOTO_STARTED) {
+      open_lock_step = OPENLOCK_STAT_CAM_PULLED;
       time_delay_before_stop_moto_in_10ms = 0;
     }
   }
 
-  if (open_lock_step == 2) {
+  if (open_lock_step == OPENLOCK_STAT_CAM_PULLED) {
     time_delay_before_stop_moto_in_10ms++;
   }
   moto_timeout_in_10ms++;
@@ -274,6 +321,8 @@ void ledOn() {
   if (moto_timeout_in_10ms >= 300) {
     stop_moto();
   }
+
+  gsm_timer++;
 }
 void ledOff() {
   //  SerialUSB.write("off");

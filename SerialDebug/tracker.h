@@ -30,7 +30,7 @@
   #define PACKET_SIZE 1400    //TCP data chunk size, modem accept max 1460 bytes per send
   #define PACKET_SIZE_DELIVERY 3000    //in case modem has this number of bytes undelivered, wait till sending new data (3000 bytes default, max sending TCP buffer is 7300)
 
-  #define CONNECT_RETRY 5    //how many time to retry connecting to remote server
+  #define CONNECT_RETRY 2    //how many time to retry connecting to remote server
 
   #define STORAGE 1                     //save logs in flash storage
   #define STORAGE_CONFIG_PAGE 0         //flash index to store configuration

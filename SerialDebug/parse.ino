@@ -20,8 +20,8 @@
       
       for(int i=0;i<2;i++)
         {
-          gsm_port.print("AT+QIRD=0,100");
-          gsm_port.print("\r\n");
+          gsm_port_print("AT+QIRD=0,100");
+          gsm_port_print("\r\n");
           delay(1000);  
   
           gsm_get_reply();   
@@ -38,9 +38,21 @@
           tmp = strstr(modem_reply, "+QIURC: \"closed\"");
           if (tmp != NULL) {
             debug_print(F("Connection closed."));
-            ret = -1;
+            ret = RESP_ERROR;
             break;
           }
+
+            tmp = strstr(modem_reply, "#p");
+            if (tmp != NULL) {
+                debug_print(F("pong."));
+                ret = RESP_PONG;
+            }
+
+            tmp = strstr(modem_reply, "#o");
+            if (tmp != NULL) {
+                debug_print(F("open lock command"));
+                ret = RESP_OPENLOCK;
+            }
           
           if(header != 1)
           {
@@ -90,20 +102,20 @@
             
         }
       
-      tmp = strstr((cmd), "eof");  
-      if(tmp!=NULL) 
-          {                  
-            //all data was received by server
-            debug_print(F("Data was fully received by the server."));              
-            ret = 1;              
-          }
-          else
-          {
-            debug_print(F("Data was not received by the server."));              
-          }
+//      tmp = strstr((cmd), "eof");  
+//      if(tmp!=NULL) 
+//          {                  
+//            //all data was received by server
+//            debug_print(F("Data was fully received by the server."));              
+//            ret = 1;              
+//          }
+//          else
+//          {
+//            debug_print(F("Data was not received by the server."));              
+//          }
                 
         
-     parse_cmd(cmd);        
+//     parse_cmd(cmd);        
      debug_print(F("parse_receive_reply() completed"));  
       
      return ret;
