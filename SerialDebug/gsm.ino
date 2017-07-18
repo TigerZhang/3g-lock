@@ -3,8 +3,9 @@
 #include "Arduino_Interface.h"
 
 #define gsm_port  MODULE_PORT
-#define gsm_port_print(x) do { MODULE_PORT.print(x); SerialUSB.print(">>>"); SerialUSB.print(x); } while(0)
-#define debug_print(x) SerialUSB.println(x)
+//#define gsm_port_print(x) do { MODULE_PORT.print(x); SerialUSB.print(">>>"); SerialUSB.print(x); } while(0)
+#define gsm_port_print(x) do { MODULE_PORT.print(x); } while(0)
+#define debug_print(x) //SerialUSB.println(x)
 
 #ifdef __cplusplus
 extern "C"{
@@ -353,8 +354,19 @@ void reverse(char* begin, char* end);
       gsm_port_print("AT+QICLOSE=0\r\n");
       delay(500);
       gsm_get_reply();
-      
-     debug_print(F("gsm_disconnect() completed")); 
+        char *tmp = strstr(modem_reply, "OK");
+
+      if(tmp!=NULL)
+        {
+          debug_print(F("gsm_disconnect(): OK found"));
+          ret = 1;
+        }
+        else
+        {
+          debug_print(F("gsm_disconnect(): OK not found."));
+        }
+
+      debug_print(F("gsm_disconnect() completed"));
      return ret;    
       
     }

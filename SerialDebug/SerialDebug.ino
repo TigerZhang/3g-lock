@@ -75,13 +75,17 @@ int wait_for_response = 0;
 int data_sent = 0;
 
 int gsm_timer = 0;
-
+int ping_timer = 0;
+int last_pong = 0;
 
 int bolt;
 int previous_bolt = -1;
 
 int cam;
 int preview_cam = -1;
+
+int status_changed = 1;
+int moto_initialized = 0;
 
 WioTracker wio = WioTracker();
 
@@ -129,9 +133,6 @@ void loop() {
     }
   }
 
-  //  yunba_gsm_send_data();
-  //
-
 //  if (SerialUSB.available()) {
 //    MODULE_PORT.write(SerialUSB.read());
 //  }
@@ -139,34 +140,63 @@ void loop() {
 //      SerialUSB.write(MODULE_PORT.read());
 //    }
 
-  //  gsm_debug();
+  // if the moto started, don't check the network anymore
+  // the network related functions are slow, they will stuck the timer
+  if (open_lock_step <= OPENLOCK_STAT_IDLE) {
+    if (data_sent) {
+      // check recv data via at command every 1s
+      if (gsm_timer >= 100) {
+        gsm_timer = 0;
 
-  //  if (gsm_timer >= 1000) {
-  //    gsm_timer = 0;
-  //
-  //    check_gsm();
-  //  }
+        check_gsm();
+      }
 
-  //  check_gsm();
+//	  debug_print("ping_timer");
+//	  debug_print(ping_timer);
+      // send ping every 1 minutes
+      if (ping_timer >= 100 * 60) {
+        debug_print("send ping");
+        send_ping();
+      }
 
-  if (data_sent) {
-	  // check recv data via at command every 2s
-    if (gsm_timer >= 200) {
-      gsm_timer = 0;
-
+//	  debug_print("last_pong");
+//	  debug_print(last_pong);
+      // if we didn't get pong after more than 1 minute
+      if (last_pong > 100 * 65) {
+        debug_print("didn't got pong after 1 minute. reset gsm");
+        last_pong = 0;
+        need_reconnect = 1;
+      }
+    } else {
       check_gsm();
     }
 
-	  // send ping every 1 minutes
-	  if (gsm_timer >= 100*60) {
-		  yunba_gsm_send_data();
-	  }
-  } else {
-    check_gsm();
+
+    if (status_changed == 1) {
+      status_changed = 0;
+
+      send_ping();
+    }
   }
 
 //  //  delay(500);
   timer_resume(TIMER2);
+
+
+  if (moto_initialized == 0 && ping_timer >= 100 * 1) {
+    moto_initialized = 1;
+    start_moto();
+  }
+}
+
+void send_ping() {
+  ping_timer = 0;
+  data_current[0] = '#';
+  data_current[1] = 'p';
+  data_current[2] = cam == 0 ? '0' : '1';
+  data_current[3] = bolt == 0 ? '0' : '1';
+  data_current[4] = 0;
+  gsm_send_http_current();
 }
 
 void check_gsm() {
@@ -180,6 +210,7 @@ void check_gsm() {
       gsm_send_at();
 
       gsm_reconnect();
+      gsm_get_imei();
       wait_for_response = 0;
       data_sent = 0;
     } else {
@@ -191,8 +222,10 @@ void check_gsm() {
         if (ret_tmp == -1) {
           need_reconnect = 1;
         } else if (ret_tmp == RESP_OPENLOCK) {
-			  start_moto();
-		  }
+          start_moto();
+        } else if (ret_tmp == RESP_PONG) {
+          last_pong = 0;
+        }
       }
     }
   }
@@ -292,10 +325,14 @@ void ledOn() {
   if (bolt != previous_bolt) {
     previous_bolt = bolt;
     bolt == 0 ? SerialUSB.println("bolt 0") : SerialUSB.println("bolt 1");
+
+    status_changed = 1;
   }
 
   cam = digitalRead(PIN_CAM);
   if (cam != preview_cam) {
+    status_changed = 1;
+
     preview_cam = cam;
     cam == 0 ? SerialUSB.println("cam 0") : SerialUSB.println("cam 1");
 
@@ -317,12 +354,14 @@ void ledOn() {
     stop_moto();
   }
 
-  // start the moto for 2s atmost
+  // start the moto for 3s atmost
   if (moto_timeout_in_10ms >= 300) {
     stop_moto();
   }
 
   gsm_timer++;
+	ping_timer++;
+	last_pong++;
 }
 void ledOff() {
   //  SerialUSB.write("off");
@@ -350,5 +389,5 @@ void init_timer2() {
   // Interrupt execution
   TIMER2->regs.adv->CR1 |= TIMER_CR1_OPM; // repeat none specified
   timer_generate_update(TIMER2);
-  //  timer_resume(TIMER2);
+  timer_resume(TIMER2);
 }
