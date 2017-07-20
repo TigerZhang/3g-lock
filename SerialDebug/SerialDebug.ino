@@ -90,6 +90,8 @@ int moto_initialized = 0;
 WioTracker wio = WioTracker();
 
 void setup() {
+  stop_moto();
+    
   // Enable Module Power
   pinMode(wio.MODULE_PWR_PIN, OUTPUT);
   digitalWrite(wio.MODULE_PWR_PIN , HIGH);
@@ -99,20 +101,22 @@ void setup() {
 
   SerialUSB.println("Begin...");
 
+  stop_moto();
+  
   wio.Power_On();
   while (false == wio.Check_If_Power_On()) {
     SerialUSB.println("Waitting for module to alive...");
     delay(1000);
   }
   SerialUSB.println("Power On O.K!");
-
+  
   SerialUSB.println("Init Timer2");
   init_timer2();
 
   pinMode(PIN_BOLT, INPUT_PULLUP);
   pinMode(PIN_CAM, INPUT_PULLUP);
   pinMode(PIN_MOTO, OUTPUT);
-  digitalWrite(PIN_MOTO, HIGH);
+  digitalWrite(PIN_MOTO, LOW);
 
   check_gsm();
 }
@@ -121,6 +125,8 @@ char cmd;
 
 void loop() {
   int ret_tmp;
+
+  //timer_resume(TIMER2);
 
   /* Debug */
   if (SerialUSB.available()) {
@@ -180,13 +186,13 @@ void loop() {
   }
 
 //  //  delay(500);
-  timer_resume(TIMER2);
-
 
   if (moto_initialized == 0 && ping_timer >= 100 * 1) {
     moto_initialized = 1;
     start_moto();
   }
+
+  timer_resume(TIMER2);
 }
 
 void send_ping() {
@@ -272,7 +278,7 @@ void gsm_reconnect() {
 }
 
 void start_moto() {
-  digitalWrite(PIN_MOTO, LOW);
+  digitalWrite(PIN_MOTO, HIGH);
   open_lock_step = OPENLOCK_STAT_MOTO_STARTED;
   moto_timeout_in_10ms = 0;
   time_delay_before_stop_moto_in_10ms = 0;
@@ -282,7 +288,7 @@ void stop_moto() {
   open_lock_step = OPENLOCK_STAT_IDLE;
   moto_timeout_in_10ms = 0;
   time_delay_before_stop_moto_in_10ms = 0;
-  digitalWrite(PIN_MOTO, HIGH);
+  digitalWrite(PIN_MOTO, LOW);
 }
 
 void yunba_gsm_send_data() {
